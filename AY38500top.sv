@@ -102,7 +102,7 @@ localparam CONF_STR = {
 	"O35,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
 	"O7A,Color Pallette,Mono,Greyscale,RGB1,RGB2,Field,Ice,Christmas,Marksman,Las Vegas;",
 	"-;",
-	"OBD,Game,Tennis,Soccer,Handicap,Squash,Practice,Rifle 1,Rifle 2;",
+	"OBD,Game,Tennis,Soccer,Handicap,Squash,Practice;", //,Rifle 1,Rifle 2;",
 	"OE,Auto Serve,No,Yes;",
 	"OF,Size,Big,Small;",
 	"OG,Angle,1,2;",
@@ -128,10 +128,20 @@ pll pll
 
 reg ce_2m;
 always @(posedge clk_sys) begin
-	reg [1:0] div;
+	reg [5:0] div;
 	
 	div <= div + 1'd1;
+	if(div == 23) div <= 0;
+
 	ce_2m <= !div;
+end
+
+reg ce_6m;
+always @(posedge clk_sys) begin
+	reg [2:0] div;
+	
+	div <= div + 1'd1;
+	ce_6m <= !div;
 end
 
 ///////////////////////IN+OUT///////////////////////
@@ -205,7 +215,7 @@ wire speed = status[17];
 wire size  = status[15];
 wire autoserve = status[14];
 
-reg [7:0] gameSelect = 7'b0000001;//Default to Tennis
+reg [7:0] gameSelect;
 always @(posedge clk_sys) gameSelect <= 8'd1 << status[13:11];
 
 /////////////////Paddle Emulation//////////////////
@@ -285,7 +295,7 @@ ay38500NTSC the_chip
 	.pinHitIn(audio),
 	.pinShotIn(1),
 	.pinLPin(lpIN),
-	.pinRPin(rpIN)
+	.pinRPin(gameSelect[4] ? lpIN : rpIN)
 );
 
 /////////////////////VIDEO//////////////////////
@@ -395,12 +405,12 @@ always @(posedge clk_sys) begin
 	end
 end
 
-arcade_fx #(100, 12) arcade_video
+arcade_fx #(240, 12) arcade_video
 (
 	.*,
 
 	.clk_video(clk_sys),
-	.ce_pix(ce_2m),
+	.ce_pix(ce_6m),
 
 	.RGB_in(colorOut),
 	.HSync(syncH),
