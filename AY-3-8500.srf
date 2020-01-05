@@ -1,0 +1,9 @@
+{ "" "" "" "Verilog HDL or VHDL warning at sys/video_mixer.sv(22): MESSAGE_ON or MESSAGE_OFF directive cannot process the non-HDL message ID 12161." {  } {  } 0 10720 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "Verilog HDL information at audio_out.v(38): always construct contains both blocking and non-blocking assignments" {  } {  } 0 10268 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "RST port on the PLL is not properly connected on instance emu:emu\|pll:pll\|pll_0002:pll_inst\|altera_pll:altera_pll_i\|general\[0\].gpll. The reset port on the PLL should be connected. If the PLL loses lock for any reason, you might need to manually reset the PLL in order to re-establish lock to the reference clock." {  } {  } 0 0 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "LOCKED port on the PLL is not properly connected on instance \"emu:emu\|pll:pll\|pll_0002:pll_inst\|altera_pll:altera_pll_i\|general\[0\].gpll\". The LOCKED port on the PLL should be connected when the FBOUTCLK port is connected. Although it is unnecessary to connect the LOCKED signal, any logic driven off of an output clock of the PLL will not know when the PLL is locked and ready." {  } {  } 0 21300 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "*" {  } {  } 0 276027 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "altera_pll.v" {  } {  } 0 9999 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "altera_cyclonev_pll.v" {  } {  } 0 9999 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "altera_pll_reconfig_core.v" {  } {  } 0 9999 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "cyclonev_pll" {  } {  } 0 9999 "" 0 0 "Design Software" 0 -1 0 ""}

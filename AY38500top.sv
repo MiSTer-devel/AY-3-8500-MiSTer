@@ -28,7 +28,7 @@ module emu
 	input         RESET,
 
 	//Must be passed to hps_io module
-	inout  [44:0] HPS_BUS,
+	inout  [45:0] HPS_BUS,
 
 	//Base video clock. Usually equals to CLK_SYS.
 	output        VGA_CLK,
@@ -43,6 +43,7 @@ module emu
 	output        VGA_HS,
 	output        VGA_VS,
 	output        VGA_DE,    // = ~(VBlank | HBlank)
+	output        VGA_F1,
 
 	//Base video clock. Usually equals to CLK_SYS.
 	output        HDMI_CLK,
@@ -73,9 +74,19 @@ module emu
 
 	output [15:0] AUDIO_L,
 	output [15:0] AUDIO_R,
-	output        AUDIO_S    // 1 - signed audio samples, 0 - unsigned
+	output        AUDIO_S,    // 1 - signed audio samples, 0 - unsigned
+
+	// Open-drain User port.
+	// 0 - D+/RX
+	// 1 - D-/TX
+	// 2..6 - USR2..USR6
+	// Set USER_OUT to 1 to read from USER_IN.
+	input   [6:0] USER_IN,
+	output  [6:0] USER_OUT
 );
 
+assign VGA_F1    = 0;
+assign USER_OUT  = '1;
 assign LED_USER  = 0;
 assign LED_DISK  = 0;
 assign LED_POWER = 0;
@@ -89,13 +100,21 @@ localparam CONF_STR = {
 	"-;",
 	"O1,Aspect Ratio,Original,Wide;",
 	"O35,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
-	"-;",
-	"O6,Invisiball,OFF,ON;",
 	"O7A,Color Pallette,Mono,Greyscale,RGB1,RGB2,Field,Ice,Christmas,Marksman,Las Vegas;",
 	"-;",
+	"OBD,Game,Tennis,Soccer,Handicap,Squash,Practice,Rifle 1,Rifle 2;",
+	"OE,Auto Serve,No,Yes;",
+	"OF,Size,Big,Small;",
+	"OG,Angle,1,2;",
+	"OH,Speed,Slow,Fast;",
+	"O6,Invisiball,OFF,ON;",
+	"-;",
 	"R0,Reset;",
-	"V,v2",`BUILD_DATE
+	"J1,Start;",
+	"V,v",`BUILD_DATE
 };
+
+
 ////////////////////   CLOCKS   ///////////////////
 
 wire clk_sys;
@@ -126,11 +145,11 @@ wire  [7:0] ioctl_dout;
 
 wire [10:0] ps2_key;
 
-wire [15:0] joystick_0, joystick_1;
-wire [15:0] joy = joystick_0;
-wire [15:0] joy2 = joystick_1;
+wire [15:0] joy0,joy1;
 wire [15:0] joystick_analog_0;
 wire [15:0] joystick_analog_1;
+
+wire [21:0] gamma_bus;
 
 hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 (
@@ -142,46 +161,33 @@ hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 	.buttons(buttons),
 	.status(status),
 	.forced_scandoubler(forced_scandoubler),
+	.gamma_bus(gamma_bus),
 
 	.ioctl_download(ioctl_download),
 	.ioctl_wr(ioctl_wr),
 	.ioctl_addr(ioctl_addr),
 	.ioctl_dout(ioctl_dout),
 
-	.joystick_0(joystick_0),
-	.joystick_1(joystick_1),
+	.joystick_0(joy0),
+	.joystick_1(joy1),
 	.joystick_analog_0(joystick_analog_0),
 	.joystick_analog_1(joystick_analog_1),	
 	.ps2_key(ps2_key)
 );
 
 wire       pressed = ps2_key[9];
-wire [8:0] code    = ps2_key[8:0];
+wire [7:0] code    = ps2_key[7:0];
 always @(posedge clk_sys) begin
 	reg old_state;
 	old_state <= ps2_key[10];
 	
 	if(old_state != ps2_key[10]) begin
-		casex(code)
-			'h01D: btnP1Up <= pressed; //W
-			'h01B: btnP1Down <= pressed; //S
-			'hX75: btnP2Up <= pressed; // up
-			'hX72: btnP2Down <= pressed; // down
-			'h029: btnServe <= pressed; // space
-			'h016: gameBtns[0:0] <= pressed; // 1
-			'h01E: gameBtns[1:1] <= pressed; // 2
-			'h026: gameBtns[2:2] <= pressed; // 3
-			'h025: gameBtns[3:3] <= pressed; // 4
-			'h02E: gameBtns[4:4] <= pressed; // 5
-			'h036: gameBtns[5:5] <= pressed; // 6
-			'h03D: gameBtns[6:6] <= pressed; // 7
-			'h01A: btnAngle <= pressed; // Z
-			'h022: btnSpeed <= pressed; // X
-			'h021: btnSize <= pressed; // C
-			'h02A: btnAutoserve <= pressed; // V
-			'h03A: btnMiss <= pressed; //M
-			'h033: btnHit <= pressed; //H
-			'h02D: btnReset <= pressed; //R
+		case(code)
+			'h1D: btnP1Up   <= pressed; // W
+			'h1B: btnP1Down <= pressed; // S
+			'h75: btnP2Up   <= pressed; // up
+			'h72: btnP2Down <= pressed; // down
+			'h29: btnServe  <= pressed; // space
 		endcase
 	end
 end
@@ -191,49 +197,15 @@ reg btnP1Down = 0;
 reg btnP2Up = 0;
 reg btnP2Down = 0;
 reg btnServe = 0;
-reg btnReset = 0;
-reg [7:0] gameBtns = 0;
-reg [7:0] gameSelect = 7'b0000001;//Default to Tennis
-reg btnAngle, btnAngleOld = 0;
-reg btnSpeed, btnSpeedOld = 0;
-reg btnSize, btnSizeOld = 0;
-reg btnAutoserve, btnAutoserveOld = 0;
-reg btnMiss = 0;
-reg btnHit = 0;
 
-reg angle = 0;
-reg speed = 0;
-reg size = 0;
-reg autoserve = 0;
-//Handle button toggling
-always @(posedge clk_sys) begin
-	btnAngleOld <= btnAngle;
-	btnSpeedOld <= btnSpeed;
-	btnSizeOld <= btnSize;
-	btnAutoserveOld <= btnAutoserve;
-	if(gameBtns[0:0])
-		gameSelect = 7'b0000001;//Tennis
-	else if(gameBtns[1:1])
-		gameSelect = 7'b0000010;//Soccer
-	else if(gameBtns[2:2])
-		gameSelect = 7'b0000100;//Handicap (using a dummy bit)
-	else if(gameBtns[3:3])
-		gameSelect = 7'b0001000;//Squash
-	else if(gameBtns[4:4])
-		gameSelect = 7'b0010000;//Practice
-	else if(gameBtns[5:5])
-		gameSelect = 7'b0100000;//Rifle 1
-	else if(gameBtns[6:6])
-		gameSelect = 7'b1000000;//Rifle 2
-	if(btnAngle & !btnAngleOld)
-		angle <= !angle;
-	if(btnSpeed & !btnSpeedOld)
-		speed <= !speed;
-	if(btnSize & !btnSizeOld)
-		size <= !size;
-	if(btnAutoserve & !btnAutoserveOld)
-		autoserve <= !autoserve;
-end
+wire angle = status[16];
+wire speed = status[17];
+wire size  = status[15];
+wire autoserve = status[14];
+
+reg [7:0] gameSelect = 7'b0000001;//Default to Tennis
+always @(posedge clk_sys) gameSelect <= 8'd1 << status[13:11];
+
 /////////////////Paddle Emulation//////////////////
 wire [4:0] paddleMoveSpeed = speed ? 5'd8 : 5'd5;//Faster paddle movement when ball speed is high
 reg [8:0] player1pos = 8'd128;
@@ -248,22 +220,19 @@ always @(posedge clk_sys) begin
 	if(vs & !vsOld) begin
 		player1cap <= player1pos;
 		player2cap <= player2pos;
-		if(btnP1Up & player1pos>0)
-			player1pos <= player1pos - paddleMoveSpeed;
-		else if(btnP1Down & player1pos<8'hFF)
-			player1pos <= player1pos + paddleMoveSpeed;
-		if(btnP2Up & player2pos>0)
-			player2pos <= player2pos - paddleMoveSpeed;
-		else if(btnP2Down & player2pos < 8'hFF)
-			player2pos <= player2pos + paddleMoveSpeed;
+
+		if(btnP1Up   | joy0[3]) player1pos <= ((player1pos - paddleMoveSpeed) > 255) ? 9'd0   : (player1pos - paddleMoveSpeed);
+		if(btnP1Down | joy0[2]) player1pos <= ((player1pos + paddleMoveSpeed) > 255) ? 9'd255 : (player1pos + paddleMoveSpeed);
+
+		if(btnP2Up   | joy1[3]) player2pos <= ((player2pos - paddleMoveSpeed) > 255) ? 9'd0   : (player2pos - paddleMoveSpeed);
+		if(btnP2Down | joy1[2]) player2pos <= ((player2pos + paddleMoveSpeed) > 255) ? 9'd255 : (player2pos + paddleMoveSpeed);
 	end
 	else if(hs & !hsOld) begin
-		if(player1cap!=0)
-			player1cap <= player1cap - 9'd1;
-		if(player2cap!=0)
-			player2cap <= player2cap - 9'd1;
+		if(player1cap!=0) player1cap <= player1cap - 9'd1;
+		if(player2cap!=0) player2cap <= player2cap - 9'd1;
 	end
 end
+
 //Signal outputs (active-high except for sync)
 wire audio;
 wire rpOut;
@@ -274,15 +243,11 @@ wire syncH;
 wire syncV;
 wire isBlanking;
 
-//Misc pins
-wire hitIn = (gameBtns[5:5] | gameBtns[6:6]) ? btnHit : audio;
-//Still unknown why example schematic instructs connecting hitIn pin to audio during ball games
-wire shotIn = (gameBtns[5:5] | gameBtns[6:6]) ? (btnHit | btnMiss) : 1'd1;
 wire lpIN = (player1cap == 0);
 wire rpIN = (player2cap == 0);
 wire lpIN_reset;//We don't use these signals, instead the VSYNC signal (identical) is directly accessed
 wire rpIN_reset;
-wire chipReset = btnReset | status[0];
+wire chipReset = status[0] | buttons[1];
 ay38500NTSC the_chip
 (
 	.superclock(clk_sys),
@@ -295,18 +260,18 @@ ay38500NTSC the_chip
 	.syncH(syncH),
 	.syncV(syncV),
 	.pinSound(audio),
-	.pinManualServe(!(autoserve | btnServe)),
+	.pinManualServe(!(autoserve | btnServe | joy0[4] | joy1[4])),
 	.pinBallAngle(!angle),
 	.pinBatSize(!size),
 	.pinBallSpeed(!speed),
-	.pinPractice(!gameSelect[4:4]),
-	.pinSquash(!gameSelect[3:3]),
-	.pinSoccer(!gameSelect[1:1]),
-	.pinTennis(!gameSelect[0:0]),
-	.pinRifle1(!gameSelect[5:5]),
-	.pinRifle2(!gameSelect[6:6]),
-	.pinHitIn(hitIn),
-	.pinShotIn(shotIn),
+	.pinPractice(!gameSelect[4]),
+	.pinSquash(!gameSelect[3]),
+	.pinSoccer(!gameSelect[1]),
+	.pinTennis(!gameSelect[0]),
+	.pinRifle1(!gameSelect[5]),
+	.pinRifle2(!gameSelect[6]),
+	.pinHitIn(audio),
+	.pinShotIn(1),
 	.pinLPin(lpIN),
 	.pinRPin(rpIN)
 );
@@ -315,7 +280,7 @@ ay38500NTSC the_chip
 wire hs = !syncH;
 wire vs = !syncV;
 wire [3:0] r,g,b;
-wire showBall = !status[6:6] | (ballHide>0);
+wire showBall = !status[6] | (ballHide>0);
 reg [5:0] ballHide = 0;
 reg audioOld = 0;
 always @(posedge clk_sys) begin
@@ -328,7 +293,7 @@ end
 reg [12:0] colorOut = 0;
 always @(posedge clk_sys) begin
 	if(ballOut & showBall) begin
-		case(status[11:7])
+		case(status[10:7])
 			'h0: colorOut <= 12'hFFF;//Mono
 			'h1: colorOut <= 12'hFFF;//Greyscale
 			'h2: colorOut <= 12'hF00;//RGB1
@@ -341,7 +306,7 @@ always @(posedge clk_sys) begin
 		endcase
 	end
 	else if(lpOut) begin
-		case(status[11:7])
+		case(status[10:7])
 			'h0: colorOut <= 12'hFFF;//Mono
 			'h1: colorOut <= 12'hFFF;//Greyscale
 			'h2: colorOut <= 12'h0F0;//RGB1
@@ -354,7 +319,7 @@ always @(posedge clk_sys) begin
 		endcase
 	end
 	else if(rpOut) begin
-		case(status[11:7])
+		case(status[10:7])
 			'h0: colorOut <= 12'hFFF;//Mono
 			'h1: colorOut <= 12'h000;//Greyscale
 			'h2: colorOut <= 12'h0F0;//RGB1
@@ -367,7 +332,7 @@ always @(posedge clk_sys) begin
 		endcase
 	end
 	else if(scorefieldOut) begin
-		case(status[11:7])
+		case(status[10:7])
 			'h0: colorOut <= 12'hFFF;//Mono
 			'h1: colorOut <= 12'hFFF;//Greyscale
 			'h2: colorOut <= 12'h00F;//RGB1
@@ -380,7 +345,7 @@ always @(posedge clk_sys) begin
 		endcase
 	end
 	else begin
-		case(status[11:7])
+		case(status[10:7])
 			'h0: colorOut <= 12'h000;//Mono
 			'h1: colorOut <= 12'h999;//Greyscale
 			'h2: colorOut <= 12'h000;//RGB1
@@ -418,7 +383,7 @@ always @(posedge clk_sys) begin
 	end
 end
 
-arcade_fx #(375, 12) arcade_video
+arcade_fx #(100, 12) arcade_video
 (
 	.*,
 
