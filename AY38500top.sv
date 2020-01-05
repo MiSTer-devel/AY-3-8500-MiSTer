@@ -98,17 +98,20 @@ localparam CONF_STR = {
 };
 ////////////////////   CLOCKS   ///////////////////
 
-wire clk_sys, clk_vid, clk_off;
-wire pll_locked;
-
+wire clk_sys;
 pll pll
 (
 	.refclk(CLK_50M),
-	.rst(0),
-	.outclk_0(clk_sys), // 7.159mhz
-	.outclk_1(clk_vid), // 28.636mhz
-	.locked(pll_locked)
+	.outclk_0(clk_sys)
 );
+
+reg ce_2m;
+always @(posedge clk_sys) begin
+	reg [1:0] div;
+	
+	div <= div + 1'd1;
+	ce_2m <= !div;
+end
 
 ///////////////////////IN+OUT///////////////////////
 
@@ -128,13 +131,6 @@ wire [15:0] joy = joystick_0;
 wire [15:0] joy2 = joystick_1;
 wire [15:0] joystick_analog_0;
 wire [15:0] joystick_analog_1;
-reg initReset_n = 0;
-always @(posedge clk_sys) begin
-	reg old_download = 0;
-	old_download <= ioctl_download;
-	
-	if(old_download & ~ioctl_download) initReset_n <= 1;
-end
 
 hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 (
@@ -205,7 +201,6 @@ reg btnAutoserve, btnAutoserveOld = 0;
 reg btnMiss = 0;
 reg btnHit = 0;
 
-reg [10:0] toggleInputs = 0;
 reg angle = 0;
 reg speed = 0;
 reg size = 0;
@@ -240,7 +235,7 @@ always @(posedge clk_sys) begin
 		autoserve <= !autoserve;
 end
 /////////////////Paddle Emulation//////////////////
-wire [4:0] paddleMoveSpeed = speed ? 8 : 5;//Faster paddle movement when ball speed is high
+wire [4:0] paddleMoveSpeed = speed ? 5'd8 : 5'd5;//Faster paddle movement when ball speed is high
 reg [8:0] player1pos = 8'd128;
 reg [8:0] player2pos = 8'd128;
 reg [8:0] player1cap = 0;
@@ -264,9 +259,9 @@ always @(posedge clk_sys) begin
 	end
 	else if(hs & !hsOld) begin
 		if(player1cap!=0)
-			player1cap <= player1cap - 1;
+			player1cap <= player1cap - 9'd1;
 		if(player2cap!=0)
-			player2cap <= player2cap - 1;
+			player2cap <= player2cap - 9'd1;
 	end
 end
 //Signal outputs (active-high except for sync)
@@ -282,7 +277,7 @@ wire isBlanking;
 //Misc pins
 wire hitIn = (gameBtns[5:5] | gameBtns[6:6]) ? btnHit : audio;
 //Still unknown why example schematic instructs connecting hitIn pin to audio during ball games
-wire shotIn = (gameBtns[5:5] | gameBtns[6:6]) ? (btnHit | btnMiss) : 1;
+wire shotIn = (gameBtns[5:5] | gameBtns[6:6]) ? (btnHit | btnMiss) : 1'd1;
 wire lpIN = (player1cap == 0);
 wire rpIN = (player2cap == 0);
 wire lpIN_reset;//We don't use these signals, instead the VSYNC signal (identical) is directly accessed
@@ -290,8 +285,8 @@ wire rpIN_reset;
 wire chipReset = btnReset | status[0];
 ay38500NTSC the_chip
 (
-	.clk(clk_sys),
-	.superclock(CLK_50M),
+	.superclock(clk_sys),
+	.clk(ce_2m),
 	.reset(!chipReset),
 	.pinRPout(rpOut),
 	.pinLPout(lpOut),
@@ -319,8 +314,6 @@ ay38500NTSC the_chip
 /////////////////////VIDEO//////////////////////
 wire hs = !syncH;
 wire vs = !syncV;
-wire hblank = !hs;
-wire vblank = !vs;
 wire [3:0] r,g,b;
 wire showBall = !status[6:6] | (ballHide>0);
 reg [5:0] ballHide = 0;
@@ -330,7 +323,7 @@ always @(posedge clk_sys) begin
 	if(!audioOld & audio)
 		ballHide <= 5'h1F;
 	else if(vs & !vsOld & ballHide!=0)
-		ballHide <= ballHide - 1;
+		ballHide <= ballHide - 1'd1;
 end
 reg [12:0] colorOut = 0;
 always @(posedge clk_sys) begin
@@ -400,22 +393,45 @@ always @(posedge clk_sys) begin
 		endcase
 	end
 end
+
+reg HBlank, VBlank;
+always @(posedge clk_sys) begin
+	reg [10:0] hcnt, vcnt;
+	reg old_hs, old_vs;
+
+	if(ce_2m) begin
+		hcnt <= hcnt + 1'd1;
+		old_hs <= syncH;
+		if(old_hs & ~syncH) begin
+			hcnt <= 0;
+			
+			vcnt <= vcnt + 1'd1;
+			old_vs <= syncV;
+			if(old_vs & ~syncV) vcnt <= 0;
+		end
+		
+		if (hcnt == 21)  HBlank <= 0;
+		if (hcnt == 100) HBlank <= 1;
+		
+		if (vcnt == 34)  VBlank <= 0;
+		if (vcnt == 240) VBlank <= 1;
+	end
+end
+
 arcade_fx #(375, 12) arcade_video
 (
-        .*,
+	.*,
 
-        .clk_video(clk_vid),
-        .ce_pix(clk_sys),
+	.clk_video(clk_sys),
+	.ce_pix(ce_2m),
 
-        .RGB_in(colorOut),
-        .HBlank(hblank),
-        .VBlank(vblank),
-        .HSync(hs),
-        .VSync(vs),
+	.RGB_in(colorOut),
+	.HSync(syncH),
+	.VSync(syncV),
 
-        .fx(status[5:3])
-        //.no_rotate(status[2])
+	.fx(status[5:3])
 );
+
 ////////////////////AUDIO////////////////////////
 assign AUDIO_L = {audio, 15'b0};
 assign AUDIO_R = AUDIO_L;
