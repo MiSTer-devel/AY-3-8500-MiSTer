@@ -419,7 +419,7 @@ always @(posedge clk_sys) begin
 	end
 end
 
-arcade_fx #(240, 12) arcade_video
+arcade_video #(.WIDTH(240), .DW(12)) arcade_video
 (
 	.*,
 
@@ -430,6 +430,8 @@ arcade_fx #(240, 12) arcade_video
 	.HSync(syncH),
 	.VSync(syncV),
 
+	.no_rotate(1),
+	.rotate_ccw(0),
 	.fx(status[5:3])
 );
 
