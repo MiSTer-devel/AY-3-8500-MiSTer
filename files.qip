@@ -1,0 +1,2 @@
+set_global_assignment -name VERILOG_FILE ay38500NTSC.v
+set_global_assignment -name SYSTEMVERILOG_FILE AY38500top.sv

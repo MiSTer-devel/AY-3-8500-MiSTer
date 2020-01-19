@@ -370,7 +370,7 @@ module ay38500NTSC(
 	wire or47 = !pinBallAngle | or35;
 	wire or48 = flop6 | !pinLPin;
 	wire or49 = !or47 | !or30;
-	wire or50 = !or32 | !or37 | !or40 | !or44 | !reset;
+	//wire or50 = !or32 | !or37 | !or40 | !or44 | !reset;
 	wire or51 = !or46 | !or33;
 	wire or52 = !pinBatSize | !ripple_ctr10_2;
 	wire or53 = flop7 | pinBatSize;
@@ -552,7 +552,7 @@ module ay38500NTSC(
 		end
 		else if(!or145 & sr0_delay) begin
 			if(shift_reg0_spot!=0) begin
-				shift_reg0_spot <= shift_reg0_spot - 1;
+				shift_reg0_spot <= shift_reg0_spot - 1'd1;
 			end
 		end
 	end
@@ -568,7 +568,7 @@ module ay38500NTSC(
 		if(!reset)
 			ripple_ctr0 <= 0;
 		else if(or192 & !rc0_delay)
-			ripple_ctr0 <= ripple_ctr0 + 1;
+			ripple_ctr0 <= ripple_ctr0 + 1'd1;
 	end
 
 	reg [4:0] ripple_ctr1 = 0;
@@ -582,7 +582,7 @@ module ay38500NTSC(
 		if(!reset)
 			ripple_ctr1 <= 0;
 		else if(or183 & !rc1_delay)
-			ripple_ctr1 <= ripple_ctr1 + 1;
+			ripple_ctr1 <= ripple_ctr1 + 1'd1;
 	end
 
 	reg [1:0] ripple_ctr2 = 0;
@@ -593,7 +593,7 @@ module ay38500NTSC(
 		if(!or213)
 			ripple_ctr2 <= 0;
 		else if(!ripple_ctr10_2 & rc2_delay)
-			ripple_ctr2 <= ripple_ctr2 + 1;
+			ripple_ctr2 <= ripple_ctr2 + 1'd1;
 	end
 
 	reg [1:0] ripple_ctr3 = 0;
@@ -604,7 +604,7 @@ module ay38500NTSC(
 		if(!or213)
 			ripple_ctr3 <= 0;
 		else if(!ripple_ctr2_2 & rc3_delay)
-			ripple_ctr3 <= ripple_ctr3 + 1;
+			ripple_ctr3 <= ripple_ctr3 + 1'd1;
 	end
 
 	reg [4:0] ripple_ctr4 = 0;
@@ -618,7 +618,7 @@ module ay38500NTSC(
 		if(flop31)
 			ripple_ctr4 <= 0;
 		else if(!or188 & rc4_delay)
-			ripple_ctr4 <= ripple_ctr4 + 1;
+			ripple_ctr4 <= ripple_ctr4 + 1'd1;
 	end
 
 	reg [1:0] ripple_ctr5 = 0;
@@ -629,7 +629,7 @@ module ay38500NTSC(
 		if(!reset)
 			ripple_ctr5 <= 0;
 		else if(!ripple_ctr3_2 & rc5_delay)
-			ripple_ctr5 <= ripple_ctr5 + 1;
+			ripple_ctr5 <= ripple_ctr5 + 1'd1;
 	end
 
 	reg [1:0] ripple_ctr6 = 0;
@@ -640,7 +640,7 @@ module ay38500NTSC(
 		if(!reset)
 			ripple_ctr6 <= 0;
 		else if(!ripple_ctr5_2 & rc6_delay)
-			ripple_ctr6 <= ripple_ctr6 + 1;
+			ripple_ctr6 <= ripple_ctr6 + 1'd1;
 	end
 
 	reg [4:0] ripple_ctr7 = 0;
@@ -654,7 +654,7 @@ module ay38500NTSC(
 		if(or14)
 			ripple_ctr7 <= 0;
 		else if(!or21 & rc7_delay)
-			ripple_ctr7 <= ripple_ctr7 + 1;
+			ripple_ctr7 <= ripple_ctr7 + 1'd1;
 	end
 
 	reg [4:0] ripple_ctr8 = 0;
@@ -668,7 +668,7 @@ module ay38500NTSC(
 		if(or48)
 			ripple_ctr8 <= 0;
 		else if(!or45 & rc8_delay)
-			ripple_ctr8 <= ripple_ctr8 + 1;
+			ripple_ctr8 <= ripple_ctr8 + 1'd1;
 	end
 
 	reg [1:0] ripple_ctr9 = 0;
@@ -679,7 +679,7 @@ module ay38500NTSC(
 		if(!or213)
 			ripple_ctr9 <= 0;
 		else if(!clk & rc9_delay)
-			ripple_ctr9 <= ripple_ctr9 + 1;
+			ripple_ctr9 <= ripple_ctr9 + 1'd1;
 	end
 
 	reg [1:0] ripple_ctr10 = 0;
@@ -690,7 +690,7 @@ module ay38500NTSC(
 		if(!or213)
 			ripple_ctr10 <= 0;
 		else if(flop7 & !rc10_delay)
-			ripple_ctr10 <= ripple_ctr10 + 1;
+			ripple_ctr10 <= ripple_ctr10 + 1'd1;
 	end
 
 	//MC: Add flop12 reset
@@ -705,7 +705,7 @@ module ay38500NTSC(
 			if(counter0==3)//this was 6
 				counter0 <= 0;
 			else
-				counter0 <= counter0 + 1;
+				counter0 <= counter0 + 1'd1;
 		end
 	end
 	reg [3:0] counter1 = 0;
@@ -725,7 +725,7 @@ module ay38500NTSC(
 			if(counter1==6)
 				counter1 <= 0;
 			else
-				counter1 <= counter1 + 1;
+				counter1 <= counter1 + 1'd1;
 		end
 	end
 	reg [7:0] counter2 = 0;
@@ -752,7 +752,7 @@ module ay38500NTSC(
 			if(counter2==126)
 				counter2 <= 0;
 			else
-				counter2 <= counter2 + 1;
+				counter2 <= counter2 + 1'd1;
 		end
 	end
 	reg [8:0] counter3 = 0;
@@ -775,7 +775,7 @@ module ay38500NTSC(
 			if(counter3==216)
 				counter3 <= 0;
 			else
-				counter3 <= counter3 + 1;
+				counter3 <= counter3 + 1'd1;
 		end
 	end
 	//MC: Multiple changes to jumping counters
@@ -792,11 +792,11 @@ module ay38500NTSC(
 		end
 		else if(clk & !counter4_delay) begin
 			if(counter4==129) begin
-				counter4 <= !counter4_jump ? 2 : !or32 ? 0 : !or37 ? 1 : !or40 ? 4 : !or44 ? 3 : 0;
+				counter4 <= !counter4_jump ? 9'd2 : !or32 ? 9'd0 : !or37 ? 9'd1 : !or40 ? 9'd4 : !or44 ? 9'd3 : 9'd0;
 				counter4_jump <= 0;
 			end
 			else
-				counter4 <= counter4 + 1;
+				counter4 <= counter4 + 1'd1;
 		end
 		if(!reset | flop3)// | counter4==129)
 			counter4_jump <= 0;
@@ -819,11 +819,11 @@ module ay38500NTSC(
 		end
 		else if(!flop7 & counter5_delay) begin//6-7-11-8-5-9-4-3-1-0
 			if(counter5==267) begin
-				counter5 <= !counter5_jump ? 6 : !or59 ? 7 : !or9 ? 11 : !or10 ? 8 : !or62 ? 5 : !or61 ? 9 : !or11 ? 4 : !or12 ? 3 : !or60 ? 1 : 0;
+				counter5 <= !counter5_jump ? 10'd6 : !or59 ? 10'd7 : !or9 ? 10'd11 : !or10 ? 10'd8 : !or62 ? 10'd5 : !or61 ? 10'd9 : !or11 ? 10'd4 : !or12 ? 10'd3 : !or60 ? 10'd1 : 10'd0;
 				counter5_jump <= 0;
 			end
 			else
-				counter5 <= counter5 + 1;
+				counter5 <= counter5 + 1'd1;
 		end
 		if(!reset)// | counter5==267)
 			counter5_jump <= 0;
