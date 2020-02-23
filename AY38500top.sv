@@ -109,8 +109,10 @@ localparam CONF_STR = {
 	"OH,Speed,Slow,Fast;",
 	"O6,Invisiball,OFF,ON;",
 	"-;",
-	"OIJ,Control P1,Digital,Y,X,Inv-X;",
-	"OKL,Control P2,Digital,Y,X,Inv-X;",
+	"OIJ,Control P1,Digital,Y,X,Paddle;",
+	"OM,Invert P1,No,Yes;",
+	"OKL,Control P2,Digital,Y,X,Paddle;",
+	"ON,Invert P2,No,Yes;",
 	"-;",
 	"R0,Reset;",
 	"J1,Start;",
@@ -161,6 +163,8 @@ wire [10:0] ps2_key;
 wire [15:0] joy0,joy1;
 wire [15:0] joystick_analog_0;
 wire [15:0] joystick_analog_1;
+wire  [7:0] paddle_0;
+wire  [7:0] paddle_1;
 
 wire [21:0] gamma_bus;
 
@@ -184,7 +188,9 @@ hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 	.joystick_0(joy0),
 	.joystick_1(joy1),
 	.joystick_analog_0(joystick_analog_0),
-	.joystick_analog_1(joystick_analog_1),	
+	.joystick_analog_1(joystick_analog_1),
+	.paddle_0(paddle_0),
+	.paddle_1(paddle_1),
 	.ps2_key(ps2_key)
 );
 
@@ -232,35 +238,35 @@ always @(posedge clk_sys) begin
 	vsOld <= vs;
 	if(vs & !vsOld) begin
 		if(!status[19:18]) begin
-			player1cap <= player1pos;
+			player1cap <= player1pos ^ {8{status[22]}};
 
 			if(btnP1Up   | joy0[3]) player1pos <= ((player1pos - paddleMoveSpeed) > 255) ? 9'd0   : (player1pos - paddleMoveSpeed);
 			if(btnP1Down | joy0[2]) player1pos <= ((player1pos + paddleMoveSpeed) > 255) ? 9'd255 : (player1pos + paddleMoveSpeed);
 		end
 		else if(~status[19]) begin
-			player1cap <= {~joystick_analog_0[15],joystick_analog_0[14:8]};
+			player1cap <= {~joystick_analog_0[15],joystick_analog_0[14:8]} ^ {8{status[22]}};
 		end
 		else if(~status[18]) begin
-			player1cap <= {~joystick_analog_0[7],joystick_analog_0[6:0]};
+			player1cap <= {~joystick_analog_0[7],joystick_analog_0[6:0]} ^ {8{status[22]}};
 		end
 		else begin
-			player1cap <= {joystick_analog_0[7],~joystick_analog_0[6:0]};
+			player1cap <= paddle_0 ^ {8{status[22]}};
 		end
 
 		if(!status[21:20]) begin
-			player2cap <= player2pos;
+			player2cap <= player2pos ^ {8{status[23]}};
 
 			if(btnP2Up   | joy1[3]) player2pos <= ((player2pos - paddleMoveSpeed) > 255) ? 9'd0   : (player2pos - paddleMoveSpeed);
 			if(btnP2Down | joy1[2]) player2pos <= ((player2pos + paddleMoveSpeed) > 255) ? 9'd255 : (player2pos + paddleMoveSpeed);
 		end
 		else if(~status[21]) begin
-			player2cap <= {~joystick_analog_1[15],joystick_analog_1[14:8]};
+			player2cap <= {~joystick_analog_1[15],joystick_analog_1[14:8]} ^ {8{status[23]}};
 		end
 		else if(~status[20]) begin
-			player2cap <= {~joystick_analog_1[7],joystick_analog_1[6:0]};
+			player2cap <= {~joystick_analog_1[7],joystick_analog_1[6:0]} ^ {8{status[23]}};
 		end
 		else begin
-			player2cap <= {joystick_analog_1[7],~joystick_analog_1[6:0]};
+			player2cap <= paddle_1 ^ {8{status[23]}};
 		end
 	end
 	else if(hs & !hsOld) begin
