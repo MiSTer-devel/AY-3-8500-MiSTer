@@ -48,6 +48,12 @@ module hps_io #(parameter STRLEN=0, PS2DIV=0, WIDE=0, VDNUM=1, PS2WE=0)
 	output reg [15:0] joystick_analog_3,
 	output reg [15:0] joystick_analog_4,
 	output reg [15:0] joystick_analog_5,
+	output reg  [7:0] paddle_0,
+	output reg  [7:0] paddle_1,
+	output reg  [7:0] paddle_2,
+	output reg  [7:0] paddle_3,
+	output reg  [7:0] paddle_4,
+	output reg  [7:0] paddle_5,
 
 	output      [1:0] buttons,
 	output            forced_scandoubler,
@@ -218,6 +224,7 @@ always@(posedge clk_sys) begin
 	reg [15:0] cmd;
 	reg  [2:0] b_wr;
 	reg  [2:0] stick_idx;
+	reg  [2:0] paddle_idx;
 	reg        ps2skip = 0;
 	reg  [3:0] stflg = 0;
 	reg [63:0] status_req;
@@ -362,7 +369,7 @@ always@(posedge clk_sys) begin
 
 					// joystick analog
 					'h1a: case(byte_cnt)
-								1: stick_idx <= io_din[2:0]; // first byte is joystick index
+								1: {paddle_idx,stick_idx} <= {io_din[6:4],io_din[2:0]}; // first byte is joystick index
 								2: case(stick_idx)
 										0: joystick_analog_0 <= io_din;
 										1: joystick_analog_1 <= io_din;
@@ -370,6 +377,14 @@ always@(posedge clk_sys) begin
 										3: joystick_analog_3 <= io_din;
 										4: joystick_analog_4 <= io_din;
 										5: joystick_analog_5 <= io_din;
+										7: case(paddle_idx)
+												0: paddle_0 <= io_din[7:0];
+												1: paddle_1 <= io_din[7:0];
+												2: paddle_2 <= io_din[7:0];
+												3: paddle_3 <= io_din[7:0];
+												4: paddle_4 <= io_din[7:0];
+												5: paddle_5 <= io_din[7:0];
+											endcase
 									endcase
 							endcase
 

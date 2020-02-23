@@ -12,7 +12,7 @@
 // 12 : 4R 4G 4B
 // 24 : 8R 8G 8B
 
-module arcade_video #(parameter WIDTH=320, HEIGHT=240, DW=8, GAMMA=1)
+module arcade_video #(parameter WIDTH=320, HEIGHT=240/* can be 0 if no_rotate(1) */, DW=8, GAMMA=1)
 (
 	input         clk_video,
 	input         ce_pix,
